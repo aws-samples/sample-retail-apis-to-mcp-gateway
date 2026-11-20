@@ -1,0 +1,43 @@
+# OpenAPI spec for the Orders API, used as the AgentCore Gateway target in Demo 1.
+# setup.sh converts this to assets/specs/orders.generated.json (gitignored) with
+# servers[0].url set to your deployed ApiBaseUrl; that JSON is what Gateway loads.
+#
+# Auth is NOT declared here on purpose: AgentCore Gateway doesn't support OpenAPI
+# security schemes in target specs. The API requires an x-api-key header
+# (ApiKeyRequired in demo-setup/orders-api/template.yaml), and Gateway sends it
+# via the target's outbound API-key credential. See the README "Security" section.
+# checkov:skip=CKV_OPENAPI_4: AgentCore Gateway rejects spec-level security schemes; the API key is enforced by API Gateway and sent via Gateway outbound auth.
+# checkov:skip=CKV_OPENAPI_5: AgentCore Gateway rejects spec-level security schemes; the API key is enforced by API Gateway and sent via Gateway outbound auth.
+openapi: 3.0.1
+info:
+  title: Orders API
+  description: Look up customer orders.
+  version: 1.0.0
+servers:
+- url: <ApiBaseUrl>
+paths:
+  /orders:
+    get:
+      operationId: listOrders
+      summary: List all orders
+      description: Returns every order in the system.
+      responses:
+        '200':
+          description: A list of orders.
+  /orders/{orderId}:
+    get:
+      operationId: getOrder
+      summary: Get a single order by its ID
+      description: Returns the full details of one order, including its status and amount.
+      parameters:
+      - name: orderId
+        in: path
+        required: true
+        description: The unique ID of the order, e.g. 12345.
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The requested order.
+        '404':
+          description: No order with that ID exists.

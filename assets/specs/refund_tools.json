@@ -1,0 +1,24 @@
+[
+  {
+    "name": "start_refund",
+    "description": "Start the refund approval workflow for an order. Returns immediately with status PENDING_APPROVAL; a human must approve before it completes.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "description": "The order ID to refund, e.g. 12345" }
+      },
+      "required": ["orderId"]
+    }
+  },
+  {
+    "name": "check_refund_status",
+    "description": "Check the status and result of an order's refund workflow, by order ID.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "orderId": { "type": "string", "description": "The order ID whose refund to check, e.g. 12345" }
+      },
+      "required": ["orderId"]
+    }
+  }
+]

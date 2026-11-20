@@ -1,0 +1,45 @@
+{
+  "Comment": "Refund approval workflow with a human-in-the-loop gate.",
+  "StartAt": "ValidateOrder",
+  "States": {
+    "ValidateOrder": {
+      "Type": "Pass",
+      "Comment": "Pretend we validate the order here.",
+      "Next": "FraudCheck"
+    },
+    "FraudCheck": {
+      "Type": "Pass",
+      "Comment": "Pretend we run a fraud check here.",
+      "Next": "ManagerApproval"
+    },
+    "ManagerApproval": {
+      "Type": "Task",
+      "Comment": "Human-in-the-loop gate. Writes the task token to DynamoDB and PAUSES until someone sends the token back (SendTaskSuccess).",
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:putItem.waitForTaskToken",
+      "TimeoutSeconds": 3600,
+      "Parameters": {
+        "TableName": "${ApprovalsTable}",
+        "Item": {
+          "orderId": { "S.$": "$.orderId" },
+          "taskToken": { "S.$": "$$.Task.Token" },
+          "status": { "S": "PENDING_APPROVAL" }
+        }
+      },
+      "ResultPath": "$.approval",
+      "Next": "ProcessRefund"
+    },
+    "ProcessRefund": {
+      "Type": "Task",
+      "Comment": "Approved - mark the refund complete in the approvals table.",
+      "Resource": "arn:aws:states:::aws-sdk:dynamodb:updateItem",
+      "Parameters": {
+        "TableName": "${ApprovalsTable}",
+        "Key": { "orderId": { "S.$": "$.orderId" } },
+        "UpdateExpression": "SET #s = :r",
+        "ExpressionAttributeNames": { "#s": "status" },
+        "ExpressionAttributeValues": { ":r": { "S": "REFUNDED" } }
+      },
+      "End": true
+    }
+  }
+}

@@ -1,0 +1,111 @@
+<mxfile host="Electron" pages="2">
+  <diagram id="demo2-workflow" name="Workflow">
+    <mxGraphModel dx="1100" dy="650" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <!-- Title -->
+        <mxCell id="title" value="Demo 2 - The refund approval workflow (Step Functions)" style="text;html=1;fontSize=18;fontStyle=1;fillColor=none;strokeColor=none;align=left;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="820" height="30" as="geometry" />
+        </mxCell>
+        <!-- States (left to right) -->
+        <mxCell id="validate" value="Validate&#xa;Order" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="220" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="fraud" value="Fraud&#xa;Check" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="220" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="approval" value="Manager Approval&#xa;(waitForTaskToken - PAUSES)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="520" y="220" width="200" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="process" value="Process&#xa;Refund" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="820" y="220" width="140" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="refunded" value="REFUNDED" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1060" y="220" width="140" height="80" as="geometry" />
+        </mxCell>
+        <!-- Amazon DynamoDB (Database - magenta) - stores task token -->
+        <mxCell id="dynamodb" value="Amazon DynamoDB&#xa;(task token, keyed by orderId)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" vertex="1" parent="1">
+          <mxGeometry x="590" y="440" width="60" height="60" as="geometry" />
+        </mxCell>
+        <!-- Manager (local approve UI) -->
+        <mxCell id="manager" value="Manager&#xa;(local approve UI)" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3E;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="440" width="60" height="60" as="geometry" />
+        </mxCell>
+        <!-- Main flow edges -->
+        <mxCell id="w0" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="validate" target="fraud">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="fraud" target="approval">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="approval" target="process">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="process" target="refunded">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <!-- Human-in-the-loop token dance -->
+        <mxCell id="w4" value="1. store token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="approval" target="dynamodb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w5" value="2. read token" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="1" source="manager" target="dynamodb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="w6" value="3. SendTaskSuccess" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="manager" target="approval">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="Copy of Workflow" id="dO4yfJcY_g2R_a9G6YBB">
+    <mxGraphModel dx="1184" dy="875" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="640" math="0" shadow="0">
+      <root>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-0" />
+        <mxCell id="KlDcSBi11YisyiV_-8FD-1" parent="KlDcSBi11YisyiV_-8FD-0" />
+        <mxCell id="KlDcSBi11YisyiV_-8FD-3" parent="KlDcSBi11YisyiV_-8FD-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" value="Validate&#xa;Order" vertex="1">
+          <mxGeometry height="80" width="140" x="40" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-4" parent="KlDcSBi11YisyiV_-8FD-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" value="Fraud&#xa;Check" vertex="1">
+          <mxGeometry height="80" width="140" x="280" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-5" parent="KlDcSBi11YisyiV_-8FD-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontStyle=1;" value="Manager Approval&#xa;(waitForTaskToken - PAUSES)" vertex="1">
+          <mxGeometry height="80" width="200" x="520" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-6" parent="KlDcSBi11YisyiV_-8FD-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" value="Process&#xa;Refund" vertex="1">
+          <mxGeometry height="80" width="140" x="820" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-7" parent="KlDcSBi11YisyiV_-8FD-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" value="REFUNDED" vertex="1">
+          <mxGeometry height="80" width="140" x="1060" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-8" parent="KlDcSBi11YisyiV_-8FD-1" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;fillColor=#C925D1;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.dynamodb;" value="Amazon DynamoDB" vertex="1">
+          <mxGeometry height="60" width="60" x="590" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-9" parent="KlDcSBi11YisyiV_-8FD-1" style="sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;fillColor=#232F3E;strokeColor=none;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;pointerEvents=1;shape=mxgraph.aws4.user;" value="Manager&#xa;(local approve UI)" vertex="1">
+          <mxGeometry height="60" width="60" x="1040" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-10" edge="1" parent="KlDcSBi11YisyiV_-8FD-1" source="KlDcSBi11YisyiV_-8FD-3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="KlDcSBi11YisyiV_-8FD-4" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-11" edge="1" parent="KlDcSBi11YisyiV_-8FD-1" source="KlDcSBi11YisyiV_-8FD-4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="KlDcSBi11YisyiV_-8FD-5" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-12" edge="1" parent="KlDcSBi11YisyiV_-8FD-1" source="KlDcSBi11YisyiV_-8FD-5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="KlDcSBi11YisyiV_-8FD-6" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-13" edge="1" parent="KlDcSBi11YisyiV_-8FD-1" source="KlDcSBi11YisyiV_-8FD-6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#333333;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="KlDcSBi11YisyiV_-8FD-7" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-14" edge="1" parent="KlDcSBi11YisyiV_-8FD-1" source="KlDcSBi11YisyiV_-8FD-5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" target="KlDcSBi11YisyiV_-8FD-8" value="1. store token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-15" edge="1" parent="KlDcSBi11YisyiV_-8FD-1" source="KlDcSBi11YisyiV_-8FD-9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" target="KlDcSBi11YisyiV_-8FD-8" value="2. read token">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="KlDcSBi11YisyiV_-8FD-16" edge="1" parent="KlDcSBi11YisyiV_-8FD-1" source="KlDcSBi11YisyiV_-8FD-9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#82b366;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.75;entryY=1;entryDx=0;entryDy=0;" target="KlDcSBi11YisyiV_-8FD-5" value="3. SendTaskSuccess">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Demo 2 - a refund approval Step Functions workflow (with a human-in-the-loop
+  gate) plus the thin Lambda that exposes it as two agent tools.
+
+Resources:
+  # -------------------------------------------------------------------------
+  # Stores the task token while the workflow waits for a human to approve.
+  # -------------------------------------------------------------------------
+  ApprovalsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: refund-approvals
+      PrimaryKey:
+        Name: orderId
+        Type: String
+
+  # -------------------------------------------------------------------------
+  # The workflow: validate -> fraud check -> MANAGER APPROVAL (pauses) -> refund.
+  # -------------------------------------------------------------------------
+  RefundWorkflow:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Name: refund-approval
+      Type: STANDARD                       # waitForTaskToken needs a Standard workflow
+      DefinitionUri: statemachine/refund.asl.json
+      DefinitionSubstitutions:
+        ApprovalsTable: !Ref ApprovalsTable
+      Policies:
+        - DynamoDBWritePolicy:             # the approval state writes the token here
+            TableName: !Ref ApprovalsTable
+
+  # -------------------------------------------------------------------------
+  # The thin Lambda that becomes two MCP tools (start_refund, check_refund_status).
+  # -------------------------------------------------------------------------
+  RefundToolsFunction:
+    Type: AWS::Serverless::Function
+    # Security-scan suppressions. This is a short-lived demo stack; see the
+    # README "Security" section before reusing it.
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_117
+            comment: Calls only Step Functions and DynamoDB public endpoints; no VPC resources are accessed.
+          - id: CKV_AWS_116
+            comment: Invoked synchronously by AgentCore Gateway; a DLQ only applies to async invocations.
+          - id: CKV_AWS_115
+            comment: Reserved concurrency fails in low-limit sandbox accounts; demo stack is torn down after use.
+          - id: CKV_AWS_173
+            comment: Env vars hold only a state machine ARN and table name (no secrets); default AWS-managed encryption at rest applies.
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: Calls only Step Functions and DynamoDB public endpoints; no VPC resources are accessed.
+          - id: W92
+            reason: Reserved concurrency fails in low-limit sandbox accounts; demo stack is torn down after use.
+    Properties:
+      FunctionName: refund-tools
+      Runtime: python3.13
+      Handler: app.handler
+      CodeUri: src/
+      Timeout: 30
+      Environment:
+        Variables:
+          STATE_MACHINE_ARN: !Ref RefundWorkflow
+          APPROVALS_TABLE: !Ref ApprovalsTable
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: states:StartExecution
+              Resource: !Ref RefundWorkflow
+        - DynamoDBReadPolicy:               # check_refund_status reads the order's status
+            TableName: !Ref ApprovalsTable
+
+Outputs:
+  ToolLambdaArn:
+    Description: Register this Lambda as a Gateway target (setup_target.py)
+    Value: !GetAtt RefundToolsFunction.Arn
+  StateMachineArn:
+    Value: !Ref RefundWorkflow
+  ApprovalsTableName:
+    Value: !Ref ApprovalsTable

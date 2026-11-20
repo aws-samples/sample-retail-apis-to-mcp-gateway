@@ -1,0 +1,6 @@
+# Local Python tooling for the demos (run in a uv/venv).
+# The AgentCore CLI itself is a separate npm install (see README.md).
+strands-agents==1.61.1   # agent in assets/console/console.py and assets/agent/agent.py
+mcp==2.1.1               # MCP client transport (streamable-HTTP)
+boto3==1.43.116          # Cognito token minting (mint_token.py) + the Demo 2 approval app
+pyyaml==6.0.3            # setup.sh: converts assets/specs/orders.yaml to the JSON Gateway loads

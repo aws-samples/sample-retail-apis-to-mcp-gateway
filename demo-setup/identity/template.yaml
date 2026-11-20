@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Shared identity for all three demos - the Amazon Cognito user pool the
+  AgentCore Gateway's CUSTOM_JWT authorizer trusts, with two machine
+  (client-credentials) identities: customer and representative.
+
+Resources:
+  # -------------------------------------------------------------------------
+  # The user pool + its prefix domain (the domain hosts the OAuth token endpoint).
+  # -------------------------------------------------------------------------
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: svs342-pool
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref UserPool
+      # Prefix domains are unique per region across all accounts. The account ID
+      # makes this one unique and deterministic, so a re-deploy keeps the same
+      # token endpoint. (Lowercase letters, numbers, hyphens; no "aws", "amazon",
+      # or "cognito".)
+      Domain: !Sub "svs342-${AWS::AccountId}"
+
+  # -------------------------------------------------------------------------
+  # Resource server with two custom scopes. Tokens carry them as
+  # refunds/invoke and refunds/refund:create; Demo 3's Cedar policy checks the
+  # second one.
+  # -------------------------------------------------------------------------
+  RefundsResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId: !Ref UserPool
+      Identifier: refunds
+      Name: refunds
+      Scopes:
+        - ScopeName: invoke
+          ScopeDescription: Call the gateway
+        - ScopeName: refund:create
+          ScopeDescription: Create refunds
+
+  # -------------------------------------------------------------------------
+  # Two machine identities. Secrets stay in Cognito: mint_token.py reads them at
+  # runtime, so they're never written to disk or exposed as stack outputs.
+  # -------------------------------------------------------------------------
+  CustomerClient:                          # can call the gateway, cannot start refunds
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: RefundsResourceServer       # the scopes must exist first
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: svs342-customer
+      GenerateSecret: true
+      AllowedOAuthFlows: [client_credentials]
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - refunds/invoke
+
+  RepresentativeClient:                    # can call the gateway AND start refunds
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: RefundsResourceServer
+    Properties:
+      UserPoolId: !Ref UserPool
+      ClientName: svs342-representative
+      GenerateSecret: true
+      AllowedOAuthFlows: [client_credentials]
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - refunds/invoke
+        - refunds/refund:create
+
+Outputs:
+  UserPoolId:
+    Value: !Ref UserPool
+  DiscoveryUrl:
+    Description: Pass to `agentcore add gateway --discovery-url` (Demo 1)
+    Value: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}/.well-known/openid-configuration"
+  TokenEndpoint:
+    Description: OAuth2 token endpoint mint_token.py posts to
+    Value: !Sub "https://${UserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/oauth2/token"
+  CustomerClientId:
+    Value: !Ref CustomerClient
+  RepresentativeClientId:
+    Value: !Ref RepresentativeClient
+  AllowedClients:
+    Description: Pass to `agentcore add gateway --allowed-clients` (Demo 1)
+    Value: !Join [",", [!Ref CustomerClient, !Ref RepresentativeClient]]
