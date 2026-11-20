@@ -45,9 +45,8 @@ Start in a terminal **at the repo root** with the venv active
 **Load the setup values into your shell first — do this before any `agentcore`
 command.** Besides the demo values (`DISCOVERY_URL`, `ALLOWED_CLIENTS`, …), this
 exports `AWS_REGION`/`AWS_DEFAULT_REGION`, which is what pins the region the
-`agentcore` CLI deploys the gateway into. The CLI has no `--region` flag for
-`create`/`deploy`; without this it falls back to **`us-east-1`**, which would put
-the gateway in a different region than the Orders API and Cognito:
+`agentcore` CLI deploys the gateway into. Without it the gateway could land in a
+different region than the Orders API and Cognito:
 
 ```bash
 source demo.env
@@ -75,21 +74,23 @@ Create the CLI project (this generates `toollayer/` at the repo root) and move
 into it — the rest of the demos run from inside `toollayer/`:
 
 ```bash
-agentcore create --project-name toollayer --no-agent
+agentcore create --name toollayer
 cd toollayer
 ```
 
 Add the gateway with JWT auth. `DISCOVERY_URL` (where the gateway finds the
 pool's signing keys) and `ALLOWED_CLIENTS` (the customer + representative app
 client IDs it accepts) are identity-stack outputs that `setup.sh` wrote into
-`demo.env`, so there's nothing to paste:
+`demo.env`, so there's nothing to paste. The CLI takes them as one JSON
+authorizer configuration, which `jq` builds from the two values:
 
 ```bash
+JWT_AUTHORIZER=$(jq -nc --arg url "$DISCOVERY_URL" --arg clients "$ALLOWED_CLIENTS" \
+  '{customJwtAuthorizer: {discoveryUrl: $url, allowedClients: ($clients | split(","))}}')
+
 agentcore add gateway --name demo-gateway --protocol-type MCP \
   --authorizer-type CUSTOM_JWT \
-  --discovery-url "$DISCOVERY_URL" \
-  --allowed-clients "$ALLOWED_CLIENTS" \
-  --no-semantic-search
+  --authorizer-configuration "$JWT_AUTHORIZER"
 ```
 
 Add the API key as an outbound credential. Gateway sends it to the Orders API in
@@ -100,30 +101,36 @@ the `x-api-key` header on every tool call:
 > for this demo's fictional data. For a real API, use IAM (SigV4) or OAuth
 > outbound auth instead. See [Security](../README.md#security).
 
+The CLI doesn't accept the key as a command-line value (that would leave it in
+your shell history), so pipe it in:
+
 ```bash
-agentcore add credential --type api-key --name ordersKey --api-key "$ORDERS_API_KEY"
+printf '%s' "$ORDERS_API_KEY" | agentcore add credentials api-key --name ordersKey --api-key -
 ```
 
 Point the gateway at the generated OpenAPI spec — each operation becomes an MCP
 tool. `setup.sh` already templated your `ApiBaseUrl` into
-`orders.generated.json`:
+`orders.generated.json`. The target itself is described in
+[`assets/targets/orders.json`](../assets/targets/orders.json): an `openApiSchema`
+target named `orders` that reads that spec and sends the `ordersKey` credential:
 
 ```bash
-agentcore add gateway-target --type open-api-schema --name orders \
-  --schema ../assets/specs/orders.generated.json --gateway demo-gateway \
-  --outbound-auth api-key --credential-name ordersKey
+agentcore add gateway-target --gateway demo-gateway \
+  --target-configuration file://../assets/targets/orders.json
 ```
 
 Deploy (renders + applies CDK; first gateway deploy ~2 min):
 
 ```bash
-agentcore deploy -y
+agentcore deploy
 ```
 
 Capture the gateway URL into the environment (used by the web console below, and
-in Demos 2 & 3):
+in Demos 2 & 3). `agentcore status` reports the gateway's ARN; the gateway ID is
+the last part of the ARN, and `agentcore gateway get` returns the URL for it:
 ```bash
-export GATEWAY_URL=$(agentcore status --type gateway --json 2>/dev/null | jq -r '.. | .gatewayUrl? // empty' | head -1)
+export GATEWAY_ARN=$(agentcore status --json 2>/dev/null | jq -r '.resources[] | select(.resourceType == "gateway") | .arn')
+export GATEWAY_URL=$(agentcore gateway get --id "${GATEWAY_ARN##*/}" --json 2>/dev/null | jq -r .gatewayUrl)
 echo "$GATEWAY_URL"         # sanity check — should print an https:// URL
 ```
 Also save it to `demo.env` (at the repo root, so the web console in Step B finds
@@ -166,7 +173,7 @@ Demo 3.
 ## Notes
 
 - Tool names: `orders___getOrder` / `orders___listOrders` (target prefix + `___`).
-- Reusable assets (specs, policies, token minter, agent) live in `assets/`,
+- Reusable assets (specs, target definitions, policies, token minter, agent) live in `assets/`,
   referenced by `../assets/…` from inside the `toollayer/` project.
 - JWT is on from here, so the console always sends a Bearer token. Enforcing *which*
   identity can do *what* is Demo 3.

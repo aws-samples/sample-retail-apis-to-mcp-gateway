@@ -39,19 +39,20 @@ banner "Demo 3 — Scoped Agent Identity (Cedar policy)"
 quiet "entering toollayer and loading demo.env (region)" 'cd ../toollayer && source ../demo.env'
 
 step "Attach a Cedar policy engine in ENFORCE mode — the gateway is now deny-by-default."
-run 'agentcore add policy-engine --name gatewayauthz --attach-to-gateways demo-gateway --attach-mode ENFORCE'
+run 'agentcore add policy-engine --name gatewayauthz --attach-to-gateways demo-gateway --attach-mode enforce'
 
-quiet "capturing the gateway ARN (Cedar pins it when naming specific tools)" 'export GATEWAY_ARN=$(agentcore status --type gateway --json 2>/dev/null | jq -r '"'"'.. | .gatewayArn? // empty'"'"' | head -1)'
+quiet "capturing the gateway ARN (Cedar pins it when naming specific tools)" 'export GATEWAY_ARN=$(agentcore status --json 2>/dev/null | jq -r '"'"'.resources[] | select(.resourceType == "gateway") | .arn'"'"')'
+quiet "checking the gateway ARN was found" 'case "$GATEWAY_ARN" in arn:*) ;; *) echo "could not read the gateway ARN from agentcore status" >&2; false ;; esac'
 
 quiet "substituting the gateway ARN into generated policy copies (committed .cedar keep the placeholder)" 'sed "s|<GATEWAY_ARN>|$GATEWAY_ARN|g" ../assets/policies/permit_read.cedar > ../assets/policies/permit_read.generated.cedar'
 quiet "generating permit_start_refund.generated.cedar" 'sed "s|<GATEWAY_ARN>|$GATEWAY_ARN|g" ../assets/policies/permit_start_refund.cedar > ../assets/policies/permit_start_refund.generated.cedar'
 
 step "Permit the read-only tools for any identity."
-run 'agentcore add policy --engine gatewayauthz --name permit_read --source ../assets/policies/permit_read.generated.cedar'
+run 'agentcore add policy --engine gatewayauthz --name permit_read --statement file://../assets/policies/permit_read.generated.cedar'
 
 step "Permit start_refund only when the token carries refund:create."
-run 'agentcore add policy --engine gatewayauthz --name permit_start_refund --source ../assets/policies/permit_start_refund.generated.cedar'
+run 'agentcore add policy --engine gatewayauthz --name permit_start_refund --statement file://../assets/policies/permit_start_refund.generated.cedar'
 
 step "Deploy."
-run 'agentcore deploy -y'
+run 'agentcore deploy'
 quiet "marking demo stage 3 in demo.env (the console reveals what this stage unlocks)" 'grep -v "^export DEMO_STAGE=" ../demo.env > ../demo.env.tmp 2>/dev/null; mv ../demo.env.tmp ../demo.env; echo "export DEMO_STAGE=3" >> ../demo.env'

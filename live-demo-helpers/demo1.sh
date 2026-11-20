@@ -43,21 +43,24 @@ run 'curl -s -H "x-api-key: $ORDERS_API_KEY" "$API_BASE_URL/orders/12345" | jq .
 
 step "Create the toollayer project."
 quiet "moving to the repo root" 'cd ..'
-run 'agentcore create --project-name toollayer --no-agent'
+run 'agentcore create --name toollayer'
 quiet "entering the toollayer project" 'cd toollayer'
 
 step "Add the gateway with JWT auth — discovery URL and client IDs come from the env, nothing to paste."
-run 'agentcore add gateway --name demo-gateway --protocol-type MCP --authorizer-type CUSTOM_JWT --discovery-url "$DISCOVERY_URL" --allowed-clients "$ALLOWED_CLIENTS" --no-semantic-search'
+quiet "building the JWT authorizer config from DISCOVERY_URL and ALLOWED_CLIENTS" 'export JWT_AUTHORIZER=$(jq -nc --arg url "$DISCOVERY_URL" --arg clients "$ALLOWED_CLIENTS" '"'"'{customJwtAuthorizer: {discoveryUrl: $url, allowedClients: ($clients | split(","))}}'"'"')'
+run 'agentcore add gateway --name demo-gateway --protocol-type MCP --authorizer-type CUSTOM_JWT --authorizer-configuration "$JWT_AUTHORIZER"'
 
-step "Add the API key as an outbound credential — Gateway sends it to the Orders API in the x-api-key header."
-run 'agentcore add credential --type api-key --name ordersKey --api-key "$ORDERS_API_KEY"'
+step "Add the API key as an outbound credential — Gateway sends it to the Orders API in the x-api-key header. The key is piped in, so it never appears on the command line."
+run 'printf "%s" "$ORDERS_API_KEY" | agentcore add credentials api-key --name ordersKey --api-key -'
 
 step "Point the gateway at the generated OpenAPI spec — each operation becomes an MCP tool."
-run 'agentcore add gateway-target --type open-api-schema --name orders --schema ../assets/specs/orders.generated.json --gateway demo-gateway --outbound-auth api-key --credential-name ordersKey'
+run 'agentcore add gateway-target --gateway demo-gateway --target-configuration file://../assets/targets/orders.json'
 
 step "Deploy — renders and applies CDK; the first gateway deploy takes ~2 min."
-run 'agentcore deploy -y'
+run 'agentcore deploy'
 
-quiet "capturing the gateway URL" 'export GATEWAY_URL=$(agentcore status --type gateway --json 2>/dev/null | jq -r '"'"'.. | .gatewayUrl? // empty'"'"' | head -1)'
+quiet "capturing the gateway ARN" 'export GATEWAY_ARN=$(agentcore status --json 2>/dev/null | jq -r '"'"'.resources[] | select(.resourceType == "gateway") | .arn'"'"')'
+quiet "looking up the gateway URL (the gateway ID is the last part of the ARN)" 'export GATEWAY_URL=$(agentcore gateway get --id "${GATEWAY_ARN##*/}" --json 2>/dev/null | jq -r .gatewayUrl)'
+quiet "checking the gateway URL was found" 'case "$GATEWAY_URL" in https://*) ;; *) echo "could not read the gateway URL from agentcore" >&2; false ;; esac'
 quiet "persisting GATEWAY_URL to demo.env (so Demo 2, Demo 3, and the console inherit it)" 'grep -v "^export GATEWAY_URL=" ../demo.env > ../demo.env.tmp 2>/dev/null; mv ../demo.env.tmp ../demo.env; echo "export GATEWAY_URL=\"$GATEWAY_URL\"" >> ../demo.env'
 quiet "marking demo stage 1 in demo.env (the console reveals what this stage unlocks)" 'grep -v "^export DEMO_STAGE=" ../demo.env > ../demo.env.tmp 2>/dev/null; mv ../demo.env.tmp ../demo.env; echo "export DEMO_STAGE=1" >> ../demo.env'

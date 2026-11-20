@@ -27,30 +27,22 @@ echo "==> SVS342 cleanup starting (region: $REGION)"
 
 # -------------------------------------------------------------------------
 # 1) AgentCore teardown. Only possible if toollayer/ was created live (Demo 1).
-#    Commands mirror the Cleanup sections of the three demo READMEs, run in
-#    reverse dependency order (policies -> engine -> targets -> gateway).
+#    `agentcore remove all` empties the local project (policies, policy engine,
+#    targets, credential, gateway); `agentcore deploy --yes` then deletes them
+#    from AWS (--yes confirms removing the stack).
 # -------------------------------------------------------------------------
 if [ -d toollayer ]; then
-  echo "==> [1/3] Removing AgentCore policies, targets, and gateway..."
+  echo "==> [1/3] Removing AgentCore policies, targets, credential, and gateway..."
   (
     cd toollayer
-    # Demo 3 — policies + policy engine
-    agentcore remove policy --engine gatewayauthz --name permit_start_refund || true
-    agentcore remove policy --engine gatewayauthz --name permit_read || true
-    agentcore remove policy-engine --name gatewayauthz || true
-    # Demo 2 — refund target
-    agentcore remove gateway-target --name refunds -y || true
-    # Demo 1 — orders target, its outbound credential, and the gateway
-    agentcore remove gateway-target --name orders -y || true
-    agentcore remove credential --name ordersKey -y || true
-    agentcore remove gateway --name demo-gateway -y || true
-    agentcore deploy -y || true
+    agentcore remove all --yes || true
+    agentcore deploy --yes || true
   )
   # The API-key credential provider lives in the AgentCore Identity token vault,
-  # outside the CDK stack, so `deploy` doesn't always delete it. Remove it
-  # directly; it holds the Orders API key.
+  # outside the CDK stack, so make sure it is gone; it holds the Orders API key.
+  # The CLI names it <project>_<target>_<credential>.
   aws bedrock-agentcore-control delete-api-key-credential-provider \
-    --name ordersKey --region "$REGION" >/dev/null 2>&1 || true
+    --name toollayer_default_ordersKey --region "$REGION" >/dev/null 2>&1 || true
 else
   echo "==> [1/3] toollayer/ not present — skipping AgentCore teardown."
 fi
@@ -60,6 +52,20 @@ fi
 #    Cognito identity pool last — the gateway that trusted it is gone by now).
 # -------------------------------------------------------------------------
 echo "==> [2/3] Deleting SAM stacks..."
+# Stop refunds still parked at the approval gate (Demo 2 and Demo 3 can leave
+# one). Step Functions keeps a state machine in DELETING until its running
+# executions end, so a parked refund would stall the stack delete for up to an
+# hour (the workflow's timeout).
+SM_ARN=$(aws stepfunctions list-state-machines --region "$REGION" \
+  --query "stateMachines[?name=='refund-approval'].stateMachineArn" \
+  --output text 2>/dev/null || true)
+if [ -n "$SM_ARN" ] && [ "$SM_ARN" != "None" ]; then
+  for arn in $(aws stepfunctions list-executions \
+      --state-machine-arn "$SM_ARN" --status-filter RUNNING --region "$REGION" \
+      --query 'executions[].executionArn' --output text 2>/dev/null); do
+    aws stepfunctions stop-execution --execution-arn "$arn" --region "$REGION" >/dev/null || true
+  done
+fi
 sam delete --stack-name svs342-refund-workflow --no-prompts --region "$REGION" || true
 sam delete --stack-name svs342-orders-api --no-prompts --region "$REGION" || true
 sam delete --stack-name svs342-identity --no-prompts --region "$REGION" || true

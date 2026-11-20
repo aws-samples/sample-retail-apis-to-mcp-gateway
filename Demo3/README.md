@@ -32,21 +32,20 @@ Continue in the Demo 2 terminal, inside `toollayer/` — `demo.env` and
 `GATEWAY_URL` are already loaded there.
 
 > **Fresh terminal?** Start at the repo root and restore the environment first,
-> so the `agentcore` CLI targets the same region as your gateway (`AWS_REGION`),
-> not its `us-east-1` default:
+> so the `agentcore` CLI targets the same region as your gateway (`AWS_REGION`).
+> `demo.env` also holds the `GATEWAY_URL` you saved in Demo 1:
 >
 > ```bash
 > source .venv/bin/activate
 > source demo.env
 > cd toollayer
-> export GATEWAY_URL=$(agentcore status --type gateway --json 2>/dev/null | jq -r '.. | .gatewayUrl? // empty' | head -1)
 > ```
 
 Attach a Cedar policy engine in ENFORCE mode. This makes the gateway
 **deny-by-default** — with no policies, *no tools are even listed*:
 
 ```bash
-agentcore add policy-engine --name gatewayauthz --attach-to-gateways demo-gateway --attach-mode ENFORCE
+agentcore add policy-engine --name gatewayauthz --attach-to-gateways demo-gateway --attach-mode enforce
 ```
 
 ### Put the gateway ARN into generated policy copies (before adding policies)
@@ -61,7 +60,7 @@ resource == AgentCore::Gateway::"<GATEWAY_ARN>"
 **1. Capture your gateway ARN into the environment.**
 
 ```bash
-export GATEWAY_ARN=$(agentcore status --type gateway --json 2>/dev/null | jq -r '.. | .gatewayArn? // empty' | head -1)
+export GATEWAY_ARN=$(agentcore status --json 2>/dev/null | jq -r '.resources[] | select(.resourceType == "gateway") | .arn')
 echo "$GATEWAY_ARN"         # sanity check — should print an arn:aws:... value
 ```
 
@@ -80,19 +79,21 @@ This only swaps the placeholder — the `permit` rules themselves are unchanged.
 **3. Permit the read-only tools** (order lookups + refund status) for any identity:
 
 ```bash
-agentcore add policy --engine gatewayauthz --name permit_read --source ../assets/policies/permit_read.generated.cedar
+agentcore add policy --engine gatewayauthz --name permit_read \
+  --statement file://../assets/policies/permit_read.generated.cedar
 ```
 
 **4. Permit the `start_refund` tool** only when the token carries `refund:create`:
 
 ```bash
-agentcore add policy --engine gatewayauthz --name permit_start_refund --source ../assets/policies/permit_start_refund.generated.cedar
+agentcore add policy --engine gatewayauthz --name permit_start_refund \
+  --statement file://../assets/policies/permit_start_refund.generated.cedar
 ```
 
 Deploy:
 
 ```bash
-agentcore deploy -y
+agentcore deploy
 ```
 
 Anything not permitted above (a new tool, a refund without the scope) is denied by default.

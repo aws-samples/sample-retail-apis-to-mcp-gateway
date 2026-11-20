@@ -74,7 +74,7 @@ Outputs:
   UserPoolId:
     Value: !Ref UserPool
   DiscoveryUrl:
-    Description: Pass to `agentcore add gateway --discovery-url` (Demo 1)
+    Description: discoveryUrl for the gateway's JWT authorizer configuration (Demo 1)
     Value: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}/.well-known/openid-configuration"
   TokenEndpoint:
     Description: OAuth2 token endpoint mint_token.py posts to
@@ -84,5 +84,5 @@ Outputs:
   RepresentativeClientId:
     Value: !Ref RepresentativeClient
   AllowedClients:
-    Description: Pass to `agentcore add gateway --allowed-clients` (Demo 1)
+    Description: allowedClients (comma-separated) for the gateway's JWT authorizer configuration (Demo 1)
     Value: !Join [",", [!Ref CustomerClient, !Ref RepresentativeClient]]

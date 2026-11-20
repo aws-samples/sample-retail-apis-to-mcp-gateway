@@ -5,7 +5,7 @@ Local Strands agent — interactive REPL client for the CLI-provisioned gateway.
 
 Run from inside `toollayer/` after `agentcore deploy` (same as Demo1/README.md):
 
-    export GATEWAY_URL=$(agentcore status --type gateway --json 2>/dev/null | jq -r '.. | .gatewayUrl? // empty' | head -1)
+    source ../demo.env      # GATEWAY_URL, saved at the end of Demo 1 Step A
     export GATEWAY_TOKEN=$(python ../assets/identity/mint_token.py representative)
     python ../assets/agent/agent.py
 
@@ -25,7 +25,7 @@ from strands.tools.mcp.mcp_client import MCPClient
 
 REGION = os.environ.get("AWS_REGION", "us-west-2")
 MODEL_ID = "us.anthropic.claude-sonnet-4-6"
-GATEWAY_URL = os.environ["GATEWAY_URL"]           # from `agentcore status --type gateway`
+GATEWAY_URL = os.environ["GATEWAY_URL"]           # saved to demo.env in Demo 1
 TOKEN = os.environ.get("GATEWAY_TOKEN")           # Cognito JWT (required — auth)
 
 headers = {"Authorization": f"Bearer {TOKEN}"} if TOKEN else None

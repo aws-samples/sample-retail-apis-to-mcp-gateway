@@ -36,8 +36,9 @@ banner "Demo 2 — Wrapping a Step Functions Workflow as a Tool"
 quiet "entering toollayer and loading demo.env (REFUND_LAMBDA_ARN, region)" 'cd ../toollayer && source ../demo.env'
 
 step "Add the refund Lambda as a target — its tool schema describes the two tools (a Lambda has no OpenAPI spec)."
-run 'agentcore add gateway-target --type lambda-function-arn --name refunds --lambda-arn "$REFUND_LAMBDA_ARN" --tool-schema-file ../assets/specs/refund_tools.json --gateway demo-gateway'
+quiet "building the refunds target config around REFUND_LAMBDA_ARN" 'export REFUNDS_TARGET=$(jq -nc --arg arn "$REFUND_LAMBDA_ARN" '"'"'{name: "refunds", targetType: "lambdaFunctionArn", lambdaFunctionArn: {lambdaArn: $arn, toolSchemaFile: "../assets/specs/refund_tools.json"}}'"'"')'
+run 'agentcore add gateway-target --gateway demo-gateway --target-configuration "$REFUNDS_TARGET"'
 
 step "Deploy."
-run 'agentcore deploy -y'
+run 'agentcore deploy'
 quiet "marking demo stage 2 in demo.env (the console reveals what this stage unlocks)" 'grep -v "^export DEMO_STAGE=" ../demo.env > ../demo.env.tmp 2>/dev/null; mv ../demo.env.tmp ../demo.env; echo "export DEMO_STAGE=2" >> ../demo.env'

@@ -1,0 +1,8 @@
+{
+  "name": "orders",
+  "targetType": "openApiSchema",
+  "schemaSource": {
+    "inline": { "path": "../assets/specs/orders.generated.json" }
+  },
+  "outboundAuth": { "type": "API_KEY", "credentialName": "ordersKey" }
+}

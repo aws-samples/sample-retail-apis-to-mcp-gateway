@@ -34,28 +34,29 @@ Continue in the Demo 1 terminal, inside `toollayer/` — `demo.env` and
 
 > **Fresh terminal?** Start at the repo root and restore the environment first
 > (`demo.env` pins `AWS_REGION` for the `agentcore` CLI and provides
-> `REFUND_LAMBDA_ARN`):
+> `REFUND_LAMBDA_ARN` and the `GATEWAY_URL` you saved in Demo 1):
 >
 > ```bash
 > source .venv/bin/activate
 > source demo.env
 > cd toollayer
-> export GATEWAY_URL=$(agentcore status --type gateway --json 2>/dev/null | jq -r '.. | .gatewayUrl? // empty' | head -1)
 > ```
 
 Add the Lambda as a target — its tool schema (in `assets/`) describes the two
 tools, since a Lambda has no OpenAPI spec:
 
 ```bash
-agentcore add gateway-target --type lambda-function-arn --name refunds \
-  --lambda-arn "$REFUND_LAMBDA_ARN" \
-  --tool-schema-file ../assets/specs/refund_tools.json --gateway demo-gateway
+REFUNDS_TARGET=$(jq -nc --arg arn "$REFUND_LAMBDA_ARN" \
+  '{name: "refunds", targetType: "lambdaFunctionArn",
+    lambdaFunctionArn: {lambdaArn: $arn, toolSchemaFile: "../assets/specs/refund_tools.json"}}')
+
+agentcore add gateway-target --gateway demo-gateway --target-configuration "$REFUNDS_TARGET"
 ```
 
 Deploy:
 
 ```bash
-agentcore deploy -y
+agentcore deploy
 ```
 
 ---

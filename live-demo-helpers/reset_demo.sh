@@ -48,33 +48,24 @@ echo "    KEEPS the SAM stacks and Cognito — run ../cleanup.sh for full teardo
 # 1) Tear down the AgentCore layer from AWS.
 #
 #    `agentcore remove ...` only edits the LOCAL project config — it does not
-#    touch AWS. `agentcore deploy -y` is what actually deletes the gateway/
+#    touch AWS. `agentcore deploy --yes` is what actually deletes the gateway/
 #    targets/policies from the account (they are provisioned via CDK). So the
 #    order MUST be: remove everything -> deploy -> (step 3) delete toollayer/.
 #    Deleting toollayer/ before the deploy would orphan the deployed AWS
 #    resources with no local project left to remove them.
-#
-#    Commands mirror the Cleanup sections of the demo READMEs and cleanup.sh,
-#    run in reverse dependency order (policies -> engine -> targets -> gateway).
 # -------------------------------------------------------------------------
 if [ -d toollayer ]; then
-  echo "==> [1/3] Removing AgentCore policies, targets, and gateway..."
+  echo "==> [1/3] Removing AgentCore policies, targets, credential, and gateway..."
   (
     cd toollayer
-    # Demo 3 — policies + policy engine
-    agentcore remove policy --engine gatewayauthz --name permit_start_refund || true
-    agentcore remove policy --engine gatewayauthz --name permit_read || true
-    agentcore remove policy-engine --name gatewayauthz || true
-    # Demo 2 — refund target
-    agentcore remove gateway-target --name refunds --gateway demo-gateway || true
-    # Demo 1 — orders target + gateway
-    agentcore remove gateway-target --name orders --gateway demo-gateway || true
-    agentcore remove gateway --name demo-gateway || true
-    # This deploy is what actually deletes the resources from AWS. If it fails
-    # (e.g. broken CDK state), the AgentCore resources may need manual removal
-    # via the AWS console or `aws bedrock-agentcore-control`. We intentionally
-    # continue (|| true) rather than aborting the rest of the reset.
-    agentcore deploy -y || true
+    # Empty the project: policies, policy engine, targets, credential, gateway.
+    agentcore remove all --yes || true
+    # This deploy is what actually deletes the resources from AWS; --yes
+    # confirms removing the stack now that the project declares nothing. If it
+    # fails (e.g. broken CDK state), the AgentCore resources may need manual
+    # removal via the AWS console or `aws bedrock-agentcore-control`. We
+    # intentionally continue (|| true) rather than aborting the rest of the reset.
+    agentcore deploy --yes || true
   )
 else
   echo "==> [1/3] toollayer/ not present — nothing deployed to remove (already reset). Skipping."
